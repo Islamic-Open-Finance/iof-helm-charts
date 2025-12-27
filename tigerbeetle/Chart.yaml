@@ -1,0 +1,16 @@
+apiVersion: v2
+name: tigerbeetle
+description: TigerBeetle distributed ledger for Islamic Open Finance platform
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - ledger
+  - financial
+  - distributed
+  - accounting
+maintainers:
+  - name: Islamic Open Finance Team
+home: https://github.com/Islamic-Open-Finance/app
+sources:
+  - https://github.com/tigerbeetle/tigerbeetle

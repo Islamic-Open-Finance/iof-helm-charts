@@ -1,0 +1,15 @@
+apiVersion: v2
+name: iof
+description: Islamic Open Finance Platform - Complete deployment chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - islamic-finance
+  - fintech
+  - banking
+  - open-banking
+  - shariah-compliant
+maintainers:
+  - name: Islamic Open Finance Platform Team
+    email: platform@islamicopenfinance.com

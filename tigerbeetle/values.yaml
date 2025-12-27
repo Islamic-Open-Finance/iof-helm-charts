@@ -1,0 +1,103 @@
+# Default values for TigerBeetle
+# This is a YAML-formatted file.
+
+# Image configuration
+image:
+  repository: ghcr.io/tigerbeetle/tigerbeetle
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Number of replicas (1 for dev, 3 or 5 for production)
+replicaCount: 1
+
+# TigerBeetle cluster configuration
+cluster:
+  id: 0
+  replicaCount: 1
+
+# Server configuration
+server:
+  port: 3001
+  # Cache settings
+  cacheGrid: 256MB
+  cacheAccounts: 128MB
+  cacheTransfers: 128MB
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 3001
+  annotations: {}
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: tigerbeetle
+
+# Persistent storage configuration
+persistence:
+  enabled: true
+  storageClass: standard
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# Resource limits
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+# Probes configuration
+livenessProbe:
+  tcpSocket:
+    port: tigerbeetle
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  tcpSocket:
+    port: tigerbeetle
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod labels
+podLabels: {}

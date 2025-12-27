@@ -1,0 +1,92 @@
+{{- if .Values.tigerbeetle.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "iof.fullname" . }}-tigerbeetle
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "tigerbeetle" "root" .) | nindent 4 }}
+spec:
+  serviceName: {{ include "iof.fullname" . }}-tigerbeetle
+  replicas: {{ .Values.tigerbeetle.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "tigerbeetle" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "iof.componentSelectorLabels" (dict "component" "tigerbeetle" "root" .) | nindent 8 }}
+    spec:
+      initContainers:
+        - name: init-tigerbeetle
+          image: {{ .Values.tigerbeetle.image.repository }}:{{ .Values.tigerbeetle.image.tag }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /var/lib/tigerbeetle/cluster_{{ .Values.tigerbeetle.cluster.id }}_replica_0.tigerbeetle ]; then
+                echo "Formatting TigerBeetle data file..."
+                tigerbeetle format \
+                  --cluster={{ .Values.tigerbeetle.cluster.id }} \
+                  --replica=0 \
+                  --replica-count={{ .Values.tigerbeetle.cluster.replicaCount }} \
+                  /var/lib/tigerbeetle/cluster_{{ .Values.tigerbeetle.cluster.id }}_replica_0.tigerbeetle
+              else
+                echo "TigerBeetle data file already exists"
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/tigerbeetle
+      containers:
+        - name: tigerbeetle
+          image: {{ .Values.tigerbeetle.image.repository }}:{{ .Values.tigerbeetle.image.tag }}
+          command:
+            - tigerbeetle
+            - start
+            - --addresses=0.0.0.0:{{ .Values.tigerbeetle.server.port }}
+            - --cache-grid={{ .Values.tigerbeetle.server.cacheGrid }}
+            - --cache-accounts={{ .Values.tigerbeetle.server.cacheAccounts }}
+            - --cache-transfers={{ .Values.tigerbeetle.server.cacheTransfers }}
+            - /var/lib/tigerbeetle/cluster_{{ .Values.tigerbeetle.cluster.id }}_replica_0.tigerbeetle
+          ports:
+            - name: tigerbeetle
+              containerPort: {{ .Values.tigerbeetle.server.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.tigerbeetle.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/tigerbeetle
+  {{- if .Values.tigerbeetle.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        {{- if .Values.tigerbeetle.persistence.storageClass }}
+        storageClassName: {{ .Values.tigerbeetle.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.tigerbeetle.persistence.size }}
+  {{- end }}
+{{- end }}
+---
+{{- if .Values.tigerbeetle.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iof.fullname" . }}-tigerbeetle
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "tigerbeetle" "root" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None  # Headless service
+  ports:
+    - name: tigerbeetle
+      port: {{ .Values.tigerbeetle.server.port }}
+      targetPort: tigerbeetle
+      protocol: TCP
+  selector:
+    {{- include "iof.componentSelectorLabels" (dict "component" "tigerbeetle" "root" .) | nindent 4 }}
+{{- end }}

@@ -1,0 +1,14 @@
+{{- if .Values.railApi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api-config
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.railApi.env.NODE_ENV | quote }}
+  PORT: {{ .Values.railApi.env.PORT | quote }}
+  LOG_LEVEL: {{ .Values.railApi.env.LOG_LEVEL | quote }}
+  ENABLE_METRICS: {{ .Values.railApi.env.ENABLE_METRICS | quote }}
+  ENABLE_TRACING: {{ .Values.railApi.env.ENABLE_TRACING | quote }}
+{{- end }}

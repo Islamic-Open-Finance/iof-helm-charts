@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "tigerbeetle.fullname" . }}
+  labels:
+    {{- include "tigerbeetle.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "tigerbeetle.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tigerbeetle.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "tigerbeetle.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "tigerbeetle.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: init-tigerbeetle
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /var/lib/tigerbeetle/cluster_{{ .Values.cluster.id }}_replica_0.tigerbeetle ]; then
+                echo "Formatting TigerBeetle data file..."
+                tigerbeetle format \
+                  --cluster={{ .Values.cluster.id }} \
+                  --replica=0 \
+                  --replica-count={{ .Values.cluster.replicaCount }} \
+                  /var/lib/tigerbeetle/cluster_{{ .Values.cluster.id }}_replica_0.tigerbeetle
+              else
+                echo "TigerBeetle data file already exists"
+              fi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/tigerbeetle
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      containers:
+        - name: tigerbeetle
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - tigerbeetle
+            - start
+            - --addresses=0.0.0.0:{{ .Values.server.port }}
+            - --cache-grid={{ .Values.server.cacheGrid }}
+            - --cache-accounts={{ .Values.server.cacheAccounts }}
+            - --cache-transfers={{ .Values.server.cacheTransfers }}
+            - /var/lib/tigerbeetle/cluster_{{ .Values.cluster.id }}_replica_0.tigerbeetle
+          ports:
+            - name: tigerbeetle
+              containerPort: {{ .Values.server.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/tigerbeetle
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        {{- with .Values.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- else }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  {{- end }}

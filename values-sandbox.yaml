@@ -1,0 +1,299 @@
+# Islamic Open Finance - Sandbox Helm Values
+# Usage: helm upgrade --install iof ./charts/iof -f values-sandbox.yaml
+
+global:
+  environment: sandbox
+  imageRegistry: ghcr.io/islamic-open-finance
+  imageTag: "latest"
+  mockMode: true
+
+  # Labels applied to all resources
+  labels:
+    app.kubernetes.io/part-of: islamic-open-finance
+    environment: sandbox
+
+# Namespace configuration
+namespace:
+  create: true
+  name: iof-sandbox
+  annotations:
+    # Auto-cleanup for ephemeral sandboxes
+    janitor/ttl: "720h" # 30 days default
+
+# Rail API Service
+railApi:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: rail-api
+    tag: "" # Uses global.imageTag if empty
+    pullPolicy: Always
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 70
+
+  env:
+    - name: NODE_ENV
+      value: "sandbox"
+    - name: FEATURE_MOCK_MODE
+      value: "true"
+    - name: FEATURE_SEARCH_RAIL_ENABLED
+      value: "true"
+    - name: LOG_LEVEL
+      value: "info"
+    - name: RATE_LIMIT_RPM
+      value: "500"
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+      nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    hosts:
+      - host: api.sandbox.islamicopenfinance.io
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-sandbox-tls
+        hosts:
+          - api.sandbox.islamicopenfinance.io
+
+# Admin Portal
+adminPortal:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: admin-portal
+    tag: ""
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ingress:
+    enabled: true
+    hosts:
+      - host: admin.sandbox.islamicopenfinance.io
+        paths:
+          - path: /
+            pathType: Prefix
+
+# Customer Dashboard
+customerDashboard:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: customer-dashboard
+    tag: ""
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  ingress:
+    enabled: true
+    hosts:
+      - host: dashboard.sandbox.islamicopenfinance.io
+        paths:
+          - path: /
+            pathType: Prefix
+
+# API Explorer
+apiExplorer:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: api-explorer
+    tag: ""
+
+  ingress:
+    enabled: true
+    hosts:
+      - host: explorer.sandbox.islamicopenfinance.io
+        paths:
+          - path: /
+            pathType: Prefix
+
+# PostgreSQL (using external RDS in AWS)
+postgresql:
+  enabled: false # Using external RDS
+  external:
+    enabled: true
+    host: "" # Set via --set or secrets
+    port: 5432
+    database: iof_sandbox
+    existingSecret: iof-db-credentials
+    secretKeys:
+      username: username
+      password: password
+
+# Meilisearch
+meilisearch:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: getmeili/meilisearch
+    tag: "v1.6"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: gp3
+
+  env:
+    - name: MEILI_ENV
+      value: "development"
+    - name: MEILI_NO_ANALYTICS
+      value: "true"
+
+  existingMasterKeySecret: meilisearch-master-key
+
+# Cerbos Authorization Engine
+cerbos:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/cerbos/cerbos
+    tag: "0.34.0"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  config:
+    server:
+      httpListenAddr: ":3592"
+      grpcListenAddr: ":3593"
+    storage:
+      driver: disk
+      disk:
+        directory: /policies
+
+# OBP Mock Gateway
+obpMock:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: obp-mock
+    tag: ""
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# Redis (for caching/sessions)
+redis:
+  enabled: false # Using external ElastiCache
+  external:
+    enabled: true
+    host: "" # Set via --set or secrets
+    port: 6379
+    existingSecret: iof-redis-credentials
+
+# ClickHouse (optional for sandbox)
+clickhouse:
+  enabled: false # Disabled for basic sandbox
+
+# Monitoring Stack
+monitoring:
+  enabled: false # Simplified for sandbox
+
+  prometheus:
+    enabled: false
+
+  grafana:
+    enabled: false
+
+# Secrets Management
+secrets:
+  # Use external secrets operator for production
+  useExternalSecrets: false
+
+  # For sandbox, secrets are created from values
+  create: true
+
+  # Secret values (use --set or external secrets in production)
+  values:
+    databaseUrl: ""
+    meilisearchMasterKey: "sandbox-master-key-change-in-production"
+    clerkSecretKey: ""
+    obpApiKey: "sandbox-obp-key"
+
+# Network Policies
+networkPolicies:
+  enabled: true
+
+  # Allow ingress from ingress controller
+  allowIngress: true
+
+  # Allow egress to external services
+  allowEgress: true
+
+# Pod Disruption Budgets
+podDisruptionBudgets:
+  enabled: true
+  minAvailable: 1
+
+# Service Accounts
+serviceAccount:
+  create: true
+  annotations:
+    # For AWS IRSA
+    eks.amazonaws.com/role-arn: ""
+
+# Init containers for database migrations
+migrations:
+  enabled: true
+  image:
+    repository: rail-api
+    tag: ""
+  command: ["pnpm", "db:migrate"]

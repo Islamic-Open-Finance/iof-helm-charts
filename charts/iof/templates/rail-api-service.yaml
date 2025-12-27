@@ -1,0 +1,17 @@
+{{- if .Values.railApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.railApi.service.type }}
+  ports:
+    - port: {{ .Values.railApi.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+{{- end }}

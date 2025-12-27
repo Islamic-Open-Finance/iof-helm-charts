@@ -1,0 +1,73 @@
+# Islamic Open Finance Platform - Umbrella Chart (Mode A)
+# Installs a curated set of rails together
+
+apiVersion: v2
+name: iof-platform
+description: Islamic Open Finance Platform - Complete deployment
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - islamic-finance
+  - shariah
+  - banking
+  - fintech
+
+maintainers:
+  - name: Islamic Open Finance
+    email: ops@islamicopenfinance.org
+
+dependencies:
+  # Core Infrastructure
+  - name: iof-core
+    version: "1.0.0"
+    repository: "file://../rails/core"
+    condition: core.enabled
+
+  # Domain Rails (can be selectively enabled/disabled)
+  - name: iof-contracts
+    version: "1.0.0"
+    repository: "file://../rails/contracts"
+    condition: rails.contracts.enabled
+
+  - name: iof-kyc
+    version: "1.0.0"
+    repository: "file://../rails/kyc"
+    condition: rails.kyc.enabled
+
+  - name: iof-compliance
+    version: "1.0.0"
+    repository: "file://../rails/compliance"
+    condition: rails.compliance.enabled
+
+  - name: iof-clearing
+    version: "1.0.0"
+    repository: "file://../rails/clearing"
+    condition: rails.clearing.enabled
+
+  - name: iof-treasury
+    version: "1.0.0"
+    repository: "file://../rails/treasury"
+    condition: rails.treasury.enabled
+
+  - name: iof-reporting
+    version: "1.0.0"
+    repository: "file://../rails/reporting"
+    condition: rails.reporting.enabled
+
+  # Horizontal Rails
+  - name: iof-metadata
+    version: "1.0.0"
+    repository: "file://../rails/metadata"
+    condition: rails.metadata.enabled
+
+  - name: iof-search
+    version: "1.0.0"
+    repository: "file://../rails/search"
+    condition: rails.search.enabled
+
+  - name: iof-events
+    version: "1.0.0"
+    repository: "file://../rails/events"
+    condition: rails.events.enabled

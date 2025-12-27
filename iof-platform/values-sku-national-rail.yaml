@@ -1,0 +1,90 @@
+# National Clearing Rail SKU Configuration
+
+rails:
+  # Clearing infrastructure rails
+  clearing:
+    enabled: true
+    replicas: 5
+    resources:
+      limits:
+        cpu: "8"
+        memory: 16Gi
+      requests:
+        cpu: "4"
+        memory: 8Gi
+
+  routing:
+    enabled: true
+    replicas: 3
+
+  messages:
+    enabled: true
+    replicas: 4
+
+  reconciliation:
+    enabled: true
+    replicas: 3
+
+  treasury:
+    enabled: true
+    replicas: 3
+
+  risk:
+    enabled: true
+    replicas: 3
+
+  reporting:
+    enabled: true
+    replicas: 3
+
+  observability:
+    enabled: true
+    replicas: 3
+
+  # Horizontal rails
+  metadata:
+    enabled: true
+
+  events:
+    enabled: true
+
+  webhooks:
+    enabled: true
+
+# High-availability configuration
+global:
+  highAvailability: true
+
+resources:
+  postgres:
+    storage: 2Ti
+    replicas: 5
+    readReplicas: 3
+
+  clickhouse:
+    storage: 5Ti
+    replicas: 5
+
+  redis:
+    memory: 64Gi
+    replicas: 5
+
+# Monitoring and alerting
+monitoring:
+  prometheus:
+    enabled: true
+    retention: 90d
+
+  grafana:
+    enabled: true
+
+  alertmanager:
+    enabled: true
+    pagerduty:
+      enabled: true
+
+# Disaster recovery
+backup:
+  enabled: true
+  schedule: "0 */6 * * *"
+  retention: 365d

@@ -1,0 +1,335 @@
+# Islamic Open Finance Platform - Helm Chart Values
+# Default values for production deployment
+
+global:
+  # Image registry and tag configuration
+  imageRegistry: ghcr.io
+  imageOrganization: islamic-open-finance
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+
+  # Deployment configuration
+  replicaCount: 2
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Resource defaults
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Rail API Service
+railApi:
+  enabled: true
+  name: rail-api
+  replicaCount: 3
+  image:
+    repository: rail-api
+    tag: "" # Uses global.imageTag if empty
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+    hosts:
+      - host: api.islamicopenfinance.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: rail-api-tls
+        hosts:
+          - api.islamicopenfinance.com
+  env:
+    NODE_ENV: production
+    PORT: "3000"
+    LOG_LEVEL: info
+    ENABLE_METRICS: "true"
+    ENABLE_TRACING: "true"
+
+# Analytics API Service
+analyticsApi:
+  enabled: true
+  name: analytics-api
+  replicaCount: 2
+  image:
+    repository: analytics-api
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 3001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 75
+  env:
+    NODE_ENV: production
+    PORT: "3001"
+
+# Ledger Service (TigerBeetle integration)
+ledgerService:
+  enabled: true
+  name: ledger-service
+  replicaCount: 2
+  image:
+    repository: ledger-service
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 3002
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    NODE_ENV: production
+    PORT: "3002"
+    TIGERBEETLE_CLUSTER_ID: "0"
+    TIGERBEETLE_REPLICA_ADDRESSES: "tigerbeetle:3000"
+
+# Admin Portal
+adminPortal:
+  enabled: true
+  name: admin-portal
+  replicaCount: 2
+  image:
+    repository: admin-portal
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: admin.islamicopenfinance.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: admin-portal-tls
+        hosts:
+          - admin.islamicopenfinance.com
+
+# Customer Dashboard
+customerDashboard:
+  enabled: true
+  name: customer-dashboard
+  replicaCount: 2
+  image:
+    repository: customer-dashboard
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: dashboard.islamicopenfinance.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: customer-dashboard-tls
+        hosts:
+          - dashboard.islamicopenfinance.com
+
+# API Explorer
+apiExplorer:
+  enabled: true
+  name: api-explorer
+  replicaCount: 2
+  image:
+    repository: api-explorer
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: explorer.islamicopenfinance.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-explorer-tls
+        hosts:
+          - explorer.islamicopenfinance.com
+
+# OBP Mock Server (for development/testing)
+obpMock:
+  enabled: false # Disabled in production
+  name: obp-mock
+  replicaCount: 1
+  image:
+    repository: obp-mock
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 3100
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 512Mi
+
+# PostgreSQL Configuration
+postgresql:
+  # External PostgreSQL (RDS)
+  external:
+    enabled: true
+    host: "" # Set via --set or environment-specific values
+    port: 5432
+    database: iof_production
+    username: iof_user
+    # Password from secret: iof-db-credentials
+  # Internal PostgreSQL (for development only)
+  internal:
+    enabled: false
+
+# Redis Configuration (ElastiCache)
+redis:
+  external:
+    enabled: true
+    host: "" # Set via --set or environment-specific values
+    port: 6379
+    # Password from secret if required
+  internal:
+    enabled: false
+
+# Meilisearch Configuration
+meilisearch:
+  enabled: true
+  externalUrl: "" # Set via --set or environment-specific values
+  masterKeySecret: meilisearch-master-key
+
+# TigerBeetle Ledger
+tigerbeetle:
+  enabled: true
+  replicaCount: 1
+  cluster:
+    id: 0
+    replicaCount: 1
+  server:
+    port: 3000
+    cacheGrid: 2GB
+    cacheAccounts: 1GB
+    cacheTransfers: 1GB
+  image:
+    repository: ghcr.io/tigerbeetle/tigerbeetle
+    tag: "0.15.3"
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: gp3
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 8Gi
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+
+# Cerbos Authorization Service
+cerbos:
+  enabled: true
+  image:
+    repository: ghcr.io/cerbos/cerbos
+    tag: "0.35.0"
+  replicaCount: 2
+  service:
+    type: ClusterIP
+    port: 3592
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  config:
+    storage: git
+    gitRepo: https://github.com/Islamic-Open-Finance/cerbos-policies.git
+
+# Network Policies
+networkPolicies:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Service Monitor for Prometheus
+serviceMonitor:
+  enabled: false # Enable when Prometheus operator is available
+  interval: 30s
+  scrapeTimeout: 10s
+
+# Pod Disruption Budgets
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

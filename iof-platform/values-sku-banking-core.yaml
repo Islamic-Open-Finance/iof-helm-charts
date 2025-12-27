@@ -1,0 +1,74 @@
+# Banking Core SKU Configuration
+
+rails:
+  # Core banking rails
+  contracts:
+    enabled: true
+    replicas: 3
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+      requests:
+        cpu: "1"
+        memory: 2Gi
+
+  kyc:
+    enabled: true
+    replicas: 2
+
+  compliance:
+    enabled: true
+    replicas: 2
+
+  aml:
+    enabled: true
+    replicas: 2
+
+  treasury:
+    enabled: true
+    replicas: 2
+
+  risk:
+    enabled: true
+    replicas: 2
+
+  reporting:
+    enabled: true
+    replicas: 2
+
+  # Horizontal rails
+  metadata:
+    enabled: true
+
+  taxonomy:
+    enabled: true
+
+  search:
+    enabled: true
+
+  events:
+    enabled: true
+
+  notifications:
+    enabled: true
+
+  webhooks:
+    enabled: true
+
+  analytics:
+    enabled: true
+
+# Resource allocation for banking workload
+resources:
+  postgres:
+    storage: 500Gi
+    replicas: 3
+
+  clickhouse:
+    storage: 1Ti
+    replicas: 3
+
+  redis:
+    memory: 16Gi
+    replicas: 3

@@ -1,0 +1,39 @@
+{{- if and .Values.railApi.enabled .Values.railApi.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+  {{- with .Values.railApi.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.railApi.ingress.className }}
+  {{- if .Values.railApi.ingress.tls }}
+  tls:
+    {{- range .Values.railApi.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.railApi.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "iof.fullname" $ }}-rail-api
+                port:
+                  number: {{ $.Values.railApi.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

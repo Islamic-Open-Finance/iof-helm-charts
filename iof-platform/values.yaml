@@ -1,0 +1,234 @@
+# Islamic Open Finance Platform - Default Values
+# Mode A: Bundled deployment with selective rail enablement
+
+global:
+  # Deployment mode: "hosted" | "byoc" | "on-premise"
+  deploymentMode: hosted
+
+  # Environment: "sandbox" | "uat" | "production" | "dr"
+  environment: sandbox
+
+  # Tenant configuration
+  tenant:
+    id: ""
+    name: ""
+
+  # Image registry
+  imageRegistry: ghcr.io/islamic-open-finance
+  imagePullPolicy: IfNotPresent
+
+  # Shared infrastructure
+  postgres:
+    enabled: true
+    host: postgres.default.svc.cluster.local
+    port: 5432
+    database: iof
+    username: iof
+    # Password from secret
+
+  clickhouse:
+    enabled: true
+    host: clickhouse.default.svc.cluster.local
+    port: 9000
+    database: iof
+
+  redis:
+    enabled: true
+    host: redis.default.svc.cluster.local
+    port: 6379
+
+  meilisearch:
+    enabled: true
+    host: meilisearch.default.svc.cluster.local
+    port: 7700
+
+  # Security
+  security:
+    mfa:
+      enabled: false
+    encryption:
+      atRest: true
+      inTransit: true
+
+# Core Infrastructure (always enabled)
+core:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: "2"
+      memory: 4Gi
+    requests:
+      cpu: "1"
+      memory: 2Gi
+
+# Rail Configuration
+# Enable/disable rails based on SKU entitlements
+rails:
+  # Metadata (horizontal)
+  metadata:
+    enabled: true
+    replicas: 2
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+
+  # Taxonomy (horizontal)
+  taxonomy:
+    enabled: true
+    replicas: 2
+
+  # Search (horizontal)
+  search:
+    enabled: true
+    replicas: 3
+
+  # Events (horizontal)
+  events:
+    enabled: true
+    replicas: 2
+
+  # Contracts (domain)
+  contracts:
+    enabled: false
+    replicas: 3
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+
+  # KYC (domain)
+  kyc:
+    enabled: false
+    replicas: 2
+
+  # Compliance (domain)
+  compliance:
+    enabled: false
+    replicas: 2
+
+  # AML (domain)
+  aml:
+    enabled: false
+    replicas: 2
+
+  # Clearing (domain)
+  clearing:
+    enabled: false
+    replicas: 3
+    resources:
+      limits:
+        cpu: "4"
+        memory: 8Gi
+
+  # Treasury (domain)
+  treasury:
+    enabled: false
+    replicas: 2
+
+  # Risk (domain)
+  risk:
+    enabled: false
+    replicas: 2
+
+  # Portfolio (domain)
+  portfolio:
+    enabled: false
+    replicas: 2
+
+  # Governance (domain)
+  governance:
+    enabled: false
+    replicas: 2
+
+  # Reporting (domain)
+  reporting:
+    enabled: false
+    replicas: 2
+
+# SKU-specific configurations
+skuProfiles:
+  # Sandbox Free
+  sandbox-free:
+    rails:
+      metadata:
+        enabled: true
+      taxonomy:
+        enabled: true
+      search:
+        enabled: true
+
+  # Banking Core
+  banking-core:
+    rails:
+      contracts:
+        enabled: true
+      kyc:
+        enabled: true
+      compliance:
+        enabled: true
+      aml:
+        enabled: true
+      treasury:
+        enabled: true
+      reporting:
+        enabled: true
+
+  # National Rail
+  national-rail:
+    rails:
+      clearing:
+        enabled: true
+      routing:
+        enabled: true
+      messages:
+        enabled: true
+      reconciliation:
+        enabled: true
+      reporting:
+        enabled: true
+
+  # Funds Pro
+  funds-pro:
+    rails:
+      contracts:
+        enabled: true
+      portfolio:
+        enabled: true
+      governance:
+        enabled: true
+      reporting:
+        enabled: true
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: api.iof.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: iof-tls
+      hosts:
+        - api.iof.example.com
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+  alertmanager:
+    enabled: true
+
+# Autoscaling
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

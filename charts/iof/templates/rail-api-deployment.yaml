@@ -1,0 +1,97 @@
+{{- if .Values.railApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+spec:
+  {{- if not .Values.railApi.autoscaling.enabled }}
+  replicas: {{ .Values.railApi.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/rail-api-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: rail-api
+          image: {{ include "iof.image" (dict "root" . "image" .Values.railApi.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.railApi.service.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.railApi.env.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.railApi.env.PORT | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.railApi.env.LOG_LEVEL | quote }}
+            - name: DATABASE_URL
+              value: {{ include "iof.databaseUrl" . | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iof-db-credentials
+                  key: password
+            - name: REDIS_URL
+              value: {{ include "iof.redisUrl" . | quote }}
+            - name: MEILISEARCH_URL
+              value: {{ .Values.meilisearch.externalUrl | quote }}
+            - name: MEILISEARCH_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.meilisearch.masterKeySecret }}
+                  key: key
+            - name: CERBOS_URL
+              value: "http://{{ include "iof.fullname" . }}-cerbos:3592"
+            - name: TIGERBEETLE_CLUSTER_ID
+              value: "0"
+            - name: TIGERBEETLE_REPLICA_ADDRESSES
+              value: "{{ include "iof.fullname" . }}-tigerbeetle:3000"
+            - name: ENABLE_METRICS
+              value: {{ .Values.railApi.env.ENABLE_METRICS | quote }}
+            - name: ENABLE_TRACING
+              value: {{ .Values.railApi.env.ENABLE_TRACING | quote }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.railApi.resources | nindent 12 }}
+      {{- with .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
