@@ -1,0 +1,510 @@
+# Default values for Islamic Open Finance Platform
+
+global:
+  environment: production
+  domain: islamicopenfinance.com
+  imagePullSecrets:
+    - name: registry-credentials
+
+# ============================================================================
+# API Gateway
+# ============================================================================
+
+apiGateway:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: iof/api-gateway
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 3000
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - host: api.islamicopenfinance.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-tls
+        hosts:
+          - api.islamicopenfinance.com
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  env:
+    - name: NODE_ENV
+      value: "production"
+    - name: PORT
+      value: "3000"
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: database-credentials
+          key: url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: redis-credentials
+          key: url
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 3000
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+# ============================================================================
+# Frontend Applications
+# ============================================================================
+
+adminPortal:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: iof/admin-portal
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 5001
+
+  ingress:
+    enabled: true
+    host: admin.islamicopenfinance.com
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+customerDashboard:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: iof/customer-dashboard
+    tag: "latest"
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 5002
+
+  ingress:
+    enabled: true
+    host: cloud.islamicopenfinance.com
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+apiExplorer:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: iof/api-explorer
+    tag: "latest"
+
+  ingress:
+    enabled: true
+    host: explorer.islamicopenfinance.com
+
+webhookExplorer:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: iof/webhook-explorer
+    tag: "latest"
+
+  ingress:
+    enabled: true
+    host: webhooks.islamicopenfinance.com
+
+complianceExplorer:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: iof/compliance-explorer
+    tag: "latest"
+
+  ingress:
+    enabled: true
+    host: compliance.islamicopenfinance.com
+
+# ============================================================================
+# Databases
+# ============================================================================
+
+postgresql:
+  enabled: true
+  auth:
+    # IMPORTANT: Override these values in production using --set or values-secrets.yaml
+    postgresPassword: REPLACE_ME_IN_PRODUCTION
+    username: iof
+    password: REPLACE_ME_IN_PRODUCTION
+    database: iof_production
+
+  primary:
+    persistence:
+      enabled: true
+      size: 100Gi
+      storageClass: "gp3"
+
+  readReplicas:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 100Gi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+
+redis:
+  enabled: true
+  architecture: replication
+  auth:
+    # IMPORTANT: Override this value in production using --set or values-secrets.yaml
+    password: REPLACE_ME_IN_PRODUCTION
+
+  master:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+  replica:
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+# ============================================================================
+# Specialized Databases
+# ============================================================================
+
+clickhouse:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: clickhouse/clickhouse-server
+    tag: "23.12"
+
+  persistence:
+    enabled: true
+    size: 500Gi
+    storageClass: "gp3"
+
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 8Gi
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+
+  service:
+    type: ClusterIP
+    httpPort: 8123
+    nativePort: 9000
+
+meilisearch:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: getmeili/meilisearch
+    tag: "v1.5"
+
+  persistence:
+    enabled: true
+    size: 50Gi
+
+  env:
+    - name: MEILI_ENV
+      value: "production"
+    - name: MEILI_MASTER_KEY
+      valueFrom:
+        secretKeyRef:
+          name: meilisearch-credentials
+          key: master-key
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+
+tigerbeetle:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: ghcr.io/tigerbeetle/tigerbeetle
+    tag: "latest"
+
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: "io2"
+
+  resources:
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+
+# ============================================================================
+# Monitoring Stack
+# ============================================================================
+
+prometheus:
+  enabled: true
+  server:
+    persistentVolume:
+      enabled: true
+      size: 100Gi
+    retention: "30d"
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 2000m
+        memory: 8Gi
+
+  alertmanager:
+    enabled: true
+    persistentVolume:
+      enabled: true
+      size: 10Gi
+
+grafana:
+  enabled: true
+  # IMPORTANT: Override this value in production using --set or values-secrets.yaml
+  adminPassword: REPLACE_ME_IN_PRODUCTION
+
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  ingress:
+    enabled: true
+    hosts:
+      - grafana.islamicopenfinance.com
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.islamicopenfinance.com
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server
+          access: proxy
+          isDefault: true
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: "default"
+          orgId: 1
+          folder: ""
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards
+
+# ============================================================================
+# Jobs & CronJobs
+# ============================================================================
+
+jobs:
+  migrations:
+    enabled: true
+    image:
+      repository: iof/migrations
+      tag: "latest"
+
+    command:
+      - "pnpm"
+      - "prisma"
+      - "migrate"
+      - "deploy"
+
+  seeding:
+    enabled: false
+    image:
+      repository: iof/migrations
+      tag: "latest"
+
+    command:
+      - "pnpm"
+      - "prisma"
+      - "db"
+      - "seed"
+
+cronJobs:
+  backups:
+    enabled: true
+    schedule: "0 2 * * *"
+    image:
+      repository: iof/backup-job
+      tag: "latest"
+
+    command:
+      - "/scripts/backup.sh"
+
+  analytics:
+    enabled: true
+    schedule: "0 * * * *"
+    image:
+      repository: iof/analytics-job
+      tag: "latest"
+
+    command:
+      - "node"
+      - "src/jobs/analytics.js"
+
+  compliance:
+    enabled: true
+    schedule: "0 0 * * *"
+    image:
+      repository: iof/compliance-job
+      tag: "latest"
+
+    command:
+      - "node"
+      - "src/jobs/compliance-check.js"
+
+# ============================================================================
+# Security & Secrets
+# ============================================================================
+
+secrets:
+  # IMPORTANT: All values below must be overridden in production!
+  # Use --set or external secret management (e.g., Vault, AWS Secrets Manager)
+  database:
+    url: "postgresql://user:REPLACE_ME@postgres:5432/iof_production"
+
+  redis:
+    url: "redis://:REPLACE_ME@redis:6379"
+
+  jwt:
+    secret: "REPLACE_ME_WITH_SECURE_RANDOM_STRING_32_BYTES"
+
+  api:
+    key: "REPLACE_ME_WITH_ACTUAL_API_KEY"
+
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::ACCOUNT_ID:role/iof-service-account-role"
+  name: "iof-service-account"
+
+rbac:
+  create: true
+
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+
+podSecurityPolicy:
+  enabled: true
+
+# ============================================================================
+# Node Affinity & Tolerations
+# ============================================================================
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - api-gateway
+          topologyKey: kubernetes.io/hostname
