@@ -4,7 +4,7 @@
 global:
   environment: sandbox
   imageRegistry: ghcr.io/islamic-open-finance
-  imageTag: "latest"
+  imageTag: "v0.1.0" # CI/CD overrides with git SHA — never use 'latest'
   mockMode: true
 
   # Labels applied to all resources
@@ -213,13 +213,13 @@ cerbos:
       disk:
         directory: /policies
 
-# OBP Mock Gateway
+# OBP Demo Gateway
 obpMock:
   enabled: true
   replicaCount: 1
 
   image:
-    repository: obp-mock
+    repository: obp-demo-server
     tag: ""
 
   resources:
