@@ -5,7 +5,7 @@ global:
   # Image registry and tag configuration
   imageRegistry: ghcr.io
   imageOrganization: islamic-open-finance
-  imageTag: latest
+  imageTag: "v0.1.0" # CI/CD overrides with git SHA or SemVer tag — never use 'latest'
   imagePullPolicy: IfNotPresent
 
   # Deployment configuration
@@ -120,116 +120,90 @@ ledgerService:
     TIGERBEETLE_CLUSTER_ID: "0"
     TIGERBEETLE_REPLICA_ADDRESSES: "tigerbeetle:3000"
 
-# Admin Portal
-adminPortal:
-  enabled: true
-  name: admin-portal
-  replicaCount: 2
-  image:
-    repository: admin-portal
-    tag: ""
-  service:
-    type: ClusterIP
-    port: 80
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-  ingress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts:
-      - host: admin.islamicopenfinance.com
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: admin-portal-tls
-        hosts:
-          - admin.islamicopenfinance.com
+# NOTE: Frontend apps (admin-portal, customer-dashboard, api-explorer,
+# developer-portal, billing-dashboard) deploy to Cloudflare Pages.
+# See .github/workflows/deploy.yml for frontend deployment config.
 
-# Customer Dashboard
-customerDashboard:
+# OBP Gateway Service (port 3004 per PORTS.md)
+obpGateway:
   enabled: true
-  name: customer-dashboard
+  name: obp-gateway
   replicaCount: 2
   image:
-    repository: customer-dashboard
+    repository: obp-gateway
     tag: ""
   service:
     type: ClusterIP
-    port: 80
+    port: 3004
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      cpu: 500m
-      memory: 1Gi
-  ingress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts:
-      - host: dashboard.islamicopenfinance.com
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: customer-dashboard-tls
-        hosts:
-          - dashboard.islamicopenfinance.com
-
-# API Explorer
-apiExplorer:
-  enabled: true
-  name: api-explorer
-  replicaCount: 2
-  image:
-    repository: api-explorer
-    tag: ""
-  service:
-    type: ClusterIP
-    port: 80
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
       cpu: 250m
       memory: 512Mi
-  ingress:
-    enabled: true
-    className: nginx
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts:
-      - host: explorer.islamicopenfinance.com
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: api-explorer-tls
-        hosts:
-          - explorer.islamicopenfinance.com
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    NODE_ENV: production
+    PORT: "3004"
+    OBP_API_HOST: "https://api.openbankproject.com"
 
-# OBP Mock Server (for development/testing)
-obpMock:
-  enabled: false # Disabled in production
-  name: obp-mock
-  replicaCount: 1
+# FinOps API Service (port 3003 per PORTS.md)
+finopsApi:
+  enabled: true
+  name: finops-api
+  replicaCount: 2
   image:
-    repository: obp-mock
+    repository: finops-api
     tag: ""
   service:
     type: ClusterIP
-    port: 3100
+    port: 3003
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  env:
+    NODE_ENV: production
+    PORT: "3003"
+
+# Document Renderer (Carbone + LibreOffice)
+documentRenderer:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: document-renderer
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 3006
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  env:
+    NODE_ENV: production
+    PORT: "3006"
+    CARBONE_WORKERS: "2"
+    LIBREOFFICE_PATH: "/usr/lib/libreoffice"
+    S3_DOCUMENTS_BUCKET: "iof-documents"
+
+# OBP Demo Server (for development/sandbox)
+obpMock:
+  enabled: false # Disabled in production, enabled in sandbox
+  name: obp-demo-server
+  replicaCount: 1
+  image:
+    repository: obp-demo-server
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 3005
   resources:
     requests:
       cpu: 50m
@@ -237,6 +211,9 @@ obpMock:
     limits:
       cpu: 250m
       memory: 512Mi
+  env:
+    NODE_ENV: production
+    PORT: "3005"
 
 # PostgreSQL Configuration
 postgresql:
@@ -333,3 +310,87 @@ serviceMonitor:
 podDisruptionBudget:
   enabled: true
   minAvailable: 1
+
+# ============================================================================
+# AWS Integration Configuration
+# ============================================================================
+
+aws:
+  region: us-east-1
+  accountId: "" # Set via --set or environment-specific values
+
+  # Cognito Configuration
+  cognito:
+    enabled: true
+    userPoolId: "" # Set from Terraform outputs
+    clientId: "" # Set from Terraform outputs
+    domain: "" # Set from Terraform outputs
+
+  # API Gateway Configuration
+  apiGateway:
+    enabled: true
+    invokeUrl: "" # Set from Terraform outputs
+    restApiId: "" # Set from Terraform outputs
+
+  # DynamoDB Tables
+  dynamodb:
+    webhookSubscriptionsTable: "" # Set from Terraform outputs
+    webhookDeliveriesTable: ""
+    apiKeysTable: ""
+    complianceChecksTable: ""
+    complianceAlertsTable: ""
+    filesTable: ""
+    reportsTable: ""
+    billingRecordsTable: ""
+    emailLogsTable: ""
+    exportJobsTable: ""
+
+  # S3 Buckets
+  s3:
+    reportsBucket: "" # Set from Terraform outputs
+    fileUploadsBucket: ""
+    dataExportsBucket: ""
+    emailTemplatesBucket: ""
+    processedFilesBucket: ""
+    quarantineBucket: ""
+
+  # SQS Queues
+  sqs:
+    webhookQueueUrl: "" # Set from Terraform outputs
+    dataExportQueueUrl: ""
+    complianceAlertsQueueUrl: ""
+    fileProcessingQueueUrl: ""
+    eventsQueueUrl: ""
+
+  # SNS Topics
+  sns:
+    platformEventsTopicArn: "" # Set from Terraform outputs
+    webhookEventsTopicArn: ""
+    complianceAlertsTopicArn: ""
+    shariahEventsTopicArn: ""
+    contractEventsTopicArn: ""
+    kycEventsTopicArn: ""
+    paymentEventsTopicArn: ""
+
+  # EventBridge
+  eventbridge:
+    eventBusName: "" # Set from Terraform outputs
+    eventBusArn: ""
+
+  # Secrets Manager
+  secrets:
+    databaseSecretArn: "" # Set from Terraform outputs
+    jwtSecretArn: ""
+    webhookSecretArn: ""
+    obpSecretArn: ""
+
+# ============================================================================
+# IRSA (IAM Roles for Service Accounts)
+# ============================================================================
+
+serviceAccount:
+  create: true
+  name: iof-service-account
+  annotations:
+    # Set EKS IAM role ARN for AWS service access
+    eks.amazonaws.com/role-arn: "" # Set from Terraform outputs
