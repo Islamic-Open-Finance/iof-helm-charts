@@ -1,0 +1,84 @@
+{{- if .Values.ledgerService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iof.fullname" . }}-ledger-service
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "ledger-service" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.ledgerService.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "ledger-service" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.ledgerService.service.port }}"
+      labels:
+        {{- include "iof.componentSelectorLabels" (dict "component" "ledger-service" "root" .) | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "iof.serviceAccountName" . }}
+      containers:
+        - name: ledger-service
+          image: {{ include "iof.image" (dict "root" . "image" .Values.ledgerService.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.ledgerService.service.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.ledgerService.env.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.ledgerService.env.PORT | quote }}
+            - name: TIGERBEETLE_CLUSTER_ID
+              value: {{ .Values.ledgerService.env.TIGERBEETLE_CLUSTER_ID | quote }}
+            - name: TIGERBEETLE_REPLICA_ADDRESSES
+              value: {{ .Values.ledgerService.env.TIGERBEETLE_REPLICA_ADDRESSES | default (printf "%s-tigerbeetle:3000" (include "iof.fullname" .)) | quote }}
+            - name: DATABASE_URL
+              value: {{ include "iof.databaseUrl" . | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iof-db-credentials
+                  key: password
+            - name: REDIS_URL
+              value: {{ include "iof.redisUrl" . | quote }}
+            - name: RAIL_API_URL
+              value: "http://{{ include "iof.fullname" . }}-rail-api:{{ .Values.railApi.service.port }}"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.ledgerService.resources | nindent 12 }}
+      {{- with .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
