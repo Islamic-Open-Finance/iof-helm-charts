@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-test-connection"
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-rail-api
+      image: curlimages/curl:8.5.0
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Testing rail-api health..."
+          curl -sf http://{{ .Release.Name }}-rail-api:3000/health || exit 1
+          echo "rail-api: OK"
+
+          echo "Testing analytics-api health..."
+          curl -sf http://{{ .Release.Name }}-analytics-api:3001/health || exit 1
+          echo "analytics-api: OK"
+
+          echo "Testing ledger-service health..."
+          curl -sf http://{{ .Release.Name }}-ledger-service:3002/health || exit 1
+          echo "ledger-service: OK"
+
+          echo "Testing cerbos health..."
+          curl -sf http://{{ .Release.Name }}-cerbos:3592/_cerbos/health || exit 1
+          echo "cerbos: OK"
+
+          echo "All service health checks passed!"
