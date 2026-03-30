@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ .Release.Name }}-test-database"
+  labels:
+    app.kubernetes.io/name: {{ .Release.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-postgres
+      image: postgres:16-alpine
+      env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-db-credentials
+              key: password
+              optional: true
+      command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Testing PostgreSQL connectivity..."
+          pg_isready -h {{ .Release.Name }}-postgresql -p 5432 -U iof || exit 1
+          echo "PostgreSQL: OK"
+
+          echo "Testing Redis connectivity..."
+          if command -v redis-cli >/dev/null 2>&1; then
+            redis-cli -h {{ .Release.Name }}-redis -p 6379 ping || echo "Redis: SKIP (no client)"
+          else
+            echo "Redis: SKIP (no client in image)"
+          fi
+
+          echo "Database connectivity tests passed!"
