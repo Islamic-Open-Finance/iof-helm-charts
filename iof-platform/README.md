@@ -1,6 +1,6 @@
-# Islamic Open Finance Platform - Helm Chart
+# Islamic Open Finance™ Platform - Helm Chart
 
-Umbrella chart for deploying the complete Islamic Open Finance platform.
+Umbrella chart for deploying the complete Islamic Open Finance™ platform.
 
 ## Deployment Modes
 
