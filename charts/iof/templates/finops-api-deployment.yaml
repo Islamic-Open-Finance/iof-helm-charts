@@ -1,0 +1,92 @@
+{{- if .Values.finopsApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "iof.fullname" . }}-finops-api
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "finops-api" "root" .) | nindent 4 }}
+spec:
+  replicas: {{ .Values.finopsApi.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "finops-api" "root" .) | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.finopsApi.service.port }}"
+      labels:
+        {{- include "iof.componentSelectorLabels" (dict "component" "finops-api" "root" .) | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "iof.serviceAccountName" . }}
+      containers:
+        - name: finops-api
+          image: {{ include "iof.image" (dict "root" . "image" .Values.finopsApi.image) }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.finopsApi.service.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.finopsApi.env.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.finopsApi.env.PORT | quote }}
+            - name: DATABASE_URL
+              value: {{ include "iof.databaseUrl" . | quote }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iof-db-credentials
+                  key: password
+            - name: REDIS_URL
+              value: {{ include "iof.redisUrl" . | quote }}
+            - name: RAIL_API_URL
+              value: "http://{{ include "iof.fullname" . }}-rail-api:{{ .Values.railApi.service.port }}"
+            - name: AWS_REGION
+              value: {{ .Values.aws.region | quote }}
+            # AWS Cost Explorer access via IRSA
+            - name: AWS_SDK_LOAD_CONFIG
+              value: "true"
+            # Stripe integration for billing analytics
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: iof-stripe-credentials
+                  key: secret-key
+                  optional: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.finopsApi.resources | nindent 12 }}
+      {{- with .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
