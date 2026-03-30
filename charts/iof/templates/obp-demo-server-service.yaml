@@ -1,0 +1,17 @@
+{{- if .Values.obpMock.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "iof.fullname" . }}-obp-demo-server
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "obp-demo-server" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.obpMock.service.type | default "ClusterIP" }}
+  ports:
+    - port: {{ .Values.obpMock.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "iof.componentSelectorLabels" (dict "component" "obp-demo-server" "root" .) | nindent 4 }}
+{{- end }}
