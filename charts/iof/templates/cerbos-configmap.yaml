@@ -1,0 +1,39 @@
+{{- if .Values.cerbos.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iof.fullname" . }}-cerbos-config
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "cerbos" "root" .) | nindent 4 }}
+data:
+  .cerbos.yaml: |
+    ---
+    server:
+      httpListenAddr: ":3592"
+      grpcListenAddr: ":3593"
+
+    storage:
+      driver: "disk"
+      disk:
+        directory: /policies
+        watchForChanges: true
+
+    schema:
+      enforcement: reject
+
+    audit:
+      enabled: true
+      backend: local
+      local:
+        storagePath: /tmp/cerbos-audit.log
+        advanced:
+          bufferSize: 256
+          maxBatchSize: 16
+          flushInterval: 30s
+
+    engine:
+      defaultPolicyVersion: "default"
+      globals:
+        highValueThreshold: 1000000
+        mfaRequired: true
+{{- end }}
