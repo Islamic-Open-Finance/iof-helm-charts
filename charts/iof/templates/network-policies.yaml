@@ -1,0 +1,339 @@
+{{- if .Values.networkPolicies.enabled }}
+# Default deny all ingress and egress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-default-deny
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    {{- toYaml .Values.networkPolicies.policyTypes | nindent 4 }}
+---
+# Allow ingress traffic to Rail API from ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api-ingress
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.railApi.service.port }}
+    # Allow from other IOF services (internal communication)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.railApi.service.port }}
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Meilisearch
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 7700
+    # Allow to TigerBeetle
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: tigerbeetle
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow to Cerbos
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cerbos
+      ports:
+        - protocol: TCP
+          port: 3592
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow ingress traffic to Analytics API
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-analytics-api-ingress
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "analytics-api" "root" .) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from Rail API
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.analyticsApi.service.port }}
+  egress:
+    # Allow to ClickHouse
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 8123
+        - protocol: TCP
+          port: 9000
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow ingress traffic to Ledger Service
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-ledger-service-ingress
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "ledger-service" "root" .) | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from Rail API only
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.ledgerService.service.port }}
+  egress:
+    # Allow to TigerBeetle
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: tigerbeetle
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow ingress traffic to Frontend Applications (Admin Portal, Customer Dashboard, API Explorer, Developer Portal)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-frontend-ingress
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - admin-portal
+          - customer-dashboard
+          - api-explorer
+          - developer-portal
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 3000
+  egress:
+    # Allow to Rail API for frontend apps
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.railApi.service.port }}
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow TigerBeetle cluster communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-tigerbeetle
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: tigerbeetle
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from Rail API and Ledger Service
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3000
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "ledger-service" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow cluster peer communication
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: tigerbeetle
+      ports:
+        - protocol: TCP
+          port: 3001
+  egress:
+    # Allow cluster peer communication
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: tigerbeetle
+      ports:
+        - protocol: TCP
+          port: 3001
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# Allow Cerbos traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "iof.fullname" . }}-cerbos
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cerbos
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from Rail API
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3592
+  egress:
+    # Allow to fetch policies from Git
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- end }}
