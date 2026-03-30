@@ -1,0 +1,124 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+# Rail API PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-rail-api-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "rail-api" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "rail-api" "root" .) | nindent 6 }}
+---
+# Analytics API PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-analytics-api-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "analytics-api" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "analytics-api" "root" .) | nindent 6 }}
+---
+# Ledger Service PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-ledger-service-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "ledger-service" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "ledger-service" "root" .) | nindent 6 }}
+---
+# Admin Portal PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-admin-portal-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "admin-portal" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "admin-portal" "root" .) | nindent 6 }}
+---
+# Customer Dashboard PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-customer-dashboard-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "customer-dashboard" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "customer-dashboard" "root" .) | nindent 6 }}
+---
+# Developer Portal PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-developer-portal-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "developer-portal" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "developer-portal" "root" .) | nindent 6 }}
+---
+# API Explorer PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-api-explorer-pdb
+  labels:
+    {{- include "iof.componentLabels" (dict "component" "api-explorer" "root" .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "iof.componentSelectorLabels" (dict "component" "api-explorer" "root" .) | nindent 6 }}
+---
+# TigerBeetle PDB - special handling for stateful set
+{{- if .Values.tigerbeetle.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-tigerbeetle-pdb
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+    app.kubernetes.io/component: tigerbeetle
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tigerbeetle
+{{- end }}
+---
+# Cerbos PDB
+{{- if .Values.cerbos.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "iof.fullname" . }}-cerbos-pdb
+  labels:
+    {{- include "iof.labels" . | nindent 4 }}
+    app.kubernetes.io/component: cerbos
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cerbos
+{{- end }}
+{{- end }}
