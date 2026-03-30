@@ -1,0 +1,21 @@
+global:
+  environment: development
+
+apiGateway:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+
+postgresql:
+  readReplicas:
+    replicaCount: 0
+
+redis:
+  replica:
+    replicaCount: 0
+
+prometheus:
+  enabled: false
+
+grafana:
+  enabled: false
