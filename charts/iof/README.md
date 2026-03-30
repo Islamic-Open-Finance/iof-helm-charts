@@ -1,6 +1,6 @@
-# Islamic Open Finance Platform - Helm Chart
+# Islamic Open Finance™ Platform - Helm Chart
 
-This Helm chart deploys the complete Islamic Open Finance platform to Kubernetes.
+This Helm chart deploys the complete Islamic Open Finance™ platform to Kubernetes.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ This chart deploys the following components:
 
 ### Core Services
 
-- **rail-api**: Main API service with all 18+ rails
+- **rail-api**: Main API service with all 105 rails
 - **analytics-api**: Analytics and reporting service
 - **ledger-service**: TigerBeetle ledger integration service
 
@@ -31,7 +31,7 @@ This chart deploys the following components:
 
 - **tigerbeetle**: High-performance distributed ledger (1M+ TPS)
 - **cerbos**: Authorization policy engine
-- **obp-mock**: Mock Open Banking Platform (dev/test only)
+- **obp-demo-server**: Mock Open Banking Platform (dev/test only)
 
 ## Installation
 
@@ -190,4 +190,4 @@ For issues and questions:
 
 ## License
 
-Proprietary - Islamic Open Finance Platform
+Proprietary - Islamic Open Finance™ Platform
