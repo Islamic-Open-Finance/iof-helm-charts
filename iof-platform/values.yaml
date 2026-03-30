@@ -147,6 +147,104 @@ rails:
     enabled: false
     replicas: 2
 
+  # ============================================
+  # Banking-Grade Operational Rails
+  # ============================================
+
+  # Records Retention (operational)
+  retention:
+    enabled: false
+    replicas: 2
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+    config:
+      defaultRetentionDays: 2555 # 7 years
+      wormStorageEnabled: true
+      legalHoldRequiresDualApproval: true
+
+  # Secrets & Keys (operational)
+  secrets:
+    enabled: false
+    replicas: 2
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    config:
+      kmsProvider: "aws" # aws | local | hsm
+      keyRotationDays: 90
+      hsmEnabled: false
+      auditAllOperations: true
+
+  # Limits & Controls (operational)
+  limits:
+    enabled: false
+    replicas: 3
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    config:
+      fourEyesApprovalEnabled: true
+      breachAlertThreshold: 80 # percentage
+      velocityCheckEnabled: true
+      realTimeEnforcement: true
+
+  # Data Quality (operational)
+  dataQuality:
+    enabled: false
+    replicas: 2
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    config:
+      anomalyDetectionEnabled: true
+      qualityScoringEnabled: true
+      validationStrictMode: true
+      mlModelEndpoint: ""
+
+  # Integration Hub (operational)
+  integrations:
+    enabled: false
+    replicas: 2
+    resources:
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    config:
+      maxConcurrentSyncs: 10
+      syncRetryAttempts: 3
+      cdcEnabled: true
+      connectorTypes:
+        - REST_API
+        - DATABASE
+        - SFTP
+        - MESSAGE_QUEUE
+        - WEBHOOK
+
+  # SLA & Incident (operational)
+  slaIncident:
+    enabled: false
+    replicas: 2
+    resources:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+    config:
+      statusPageEnabled: true
+      rcaWorkflowEnabled: true
+      alertChannels:
+        - slack
+        - pagerduty
+        - email
+      defaultSLAs:
+        availability: 99.9
+        latencyP99Ms: 200
+        errorRatePercent: 0.1
+
 # SKU-specific configurations
 skuProfiles:
   # Sandbox Free
@@ -174,6 +272,10 @@ skuProfiles:
         enabled: true
       reporting:
         enabled: true
+      limits:
+        enabled: true
+      secrets:
+        enabled: true
 
   # National Rail
   national-rail:
@@ -188,6 +290,8 @@ skuProfiles:
         enabled: true
       reporting:
         enabled: true
+      limits:
+        enabled: true
 
   # Funds Pro
   funds-pro:
@@ -199,6 +303,64 @@ skuProfiles:
       governance:
         enabled: true
       reporting:
+        enabled: true
+      limits:
+        enabled: true
+
+  # Compliance Plus
+  compliance-plus:
+    rails:
+      contracts:
+        enabled: true
+      kyc:
+        enabled: true
+      compliance:
+        enabled: true
+      aml:
+        enabled: true
+      retention:
+        enabled: true
+      limits:
+        enabled: true
+      dataQuality:
+        enabled: true
+
+  # Enterprise
+  enterprise:
+    rails:
+      # All domain rails
+      contracts:
+        enabled: true
+      kyc:
+        enabled: true
+      compliance:
+        enabled: true
+      aml:
+        enabled: true
+      clearing:
+        enabled: true
+      treasury:
+        enabled: true
+      risk:
+        enabled: true
+      portfolio:
+        enabled: true
+      governance:
+        enabled: true
+      reporting:
+        enabled: true
+      # All banking-grade operational rails
+      retention:
+        enabled: true
+      secrets:
+        enabled: true
+      limits:
+        enabled: true
+      dataQuality:
+        enabled: true
+      integrations:
+        enabled: true
+      slaIncident:
         enabled: true
 
 # Ingress
