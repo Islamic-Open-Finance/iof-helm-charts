@@ -11,4 +11,39 @@ data:
   LOG_LEVEL: {{ .Values.railApi.env.LOG_LEVEL | quote }}
   ENABLE_METRICS: {{ .Values.railApi.env.ENABLE_METRICS | quote }}
   ENABLE_TRACING: {{ .Values.railApi.env.ENABLE_TRACING | quote }}
+  # AWS Configuration
+  AWS_REGION: {{ .Values.aws.region | quote }}
+  {{- if .Values.aws.cognito.enabled }}
+  AWS_COGNITO_USER_POOL_ID: {{ .Values.aws.cognito.userPoolId | quote }}
+  AWS_COGNITO_CLIENT_ID: {{ .Values.aws.cognito.clientId | quote }}
+  {{- end }}
+  {{- if .Values.aws.apiGateway.enabled }}
+  AWS_API_GATEWAY_URL: {{ .Values.aws.apiGateway.invokeUrl | quote }}
+  {{- end }}
+  # DynamoDB Tables
+  DYNAMODB_WEBHOOK_SUBSCRIPTIONS_TABLE: {{ .Values.aws.dynamodb.webhookSubscriptionsTable | quote }}
+  DYNAMODB_WEBHOOK_DELIVERIES_TABLE: {{ .Values.aws.dynamodb.webhookDeliveriesTable | quote }}
+  DYNAMODB_API_KEYS_TABLE: {{ .Values.aws.dynamodb.apiKeysTable | quote }}
+  DYNAMODB_COMPLIANCE_CHECKS_TABLE: {{ .Values.aws.dynamodb.complianceChecksTable | quote }}
+  DYNAMODB_FILES_TABLE: {{ .Values.aws.dynamodb.filesTable | quote }}
+  # S3 Buckets
+  S3_REPORTS_BUCKET: {{ .Values.aws.s3.reportsBucket | quote }}
+  S3_FILE_UPLOADS_BUCKET: {{ .Values.aws.s3.fileUploadsBucket | quote }}
+  S3_DATA_EXPORTS_BUCKET: {{ .Values.aws.s3.dataExportsBucket | quote }}
+  # SQS Queues
+  SQS_WEBHOOK_QUEUE_URL: {{ .Values.aws.sqs.webhookQueueUrl | quote }}
+  SQS_DATA_EXPORT_QUEUE_URL: {{ .Values.aws.sqs.dataExportQueueUrl | quote }}
+  SQS_COMPLIANCE_ALERTS_QUEUE_URL: {{ .Values.aws.sqs.complianceAlertsQueueUrl | quote }}
+  SQS_FILE_PROCESSING_QUEUE_URL: {{ .Values.aws.sqs.fileProcessingQueueUrl | quote }}
+  SQS_EVENTS_QUEUE_URL: {{ .Values.aws.sqs.eventsQueueUrl | quote }}
+  # SNS Topics
+  SNS_PLATFORM_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.platformEventsTopicArn | quote }}
+  SNS_WEBHOOK_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.webhookEventsTopicArn | quote }}
+  SNS_COMPLIANCE_ALERTS_TOPIC_ARN: {{ .Values.aws.sns.complianceAlertsTopicArn | quote }}
+  SNS_SHARIAH_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.shariahEventsTopicArn | quote }}
+  SNS_CONTRACT_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.contractEventsTopicArn | quote }}
+  SNS_KYC_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.kycEventsTopicArn | quote }}
+  SNS_PAYMENT_EVENTS_TOPIC_ARN: {{ .Values.aws.sns.paymentEventsTopicArn | quote }}
+  # EventBridge
+  EVENTBRIDGE_BUS_NAME: {{ .Values.aws.eventbridge.eventBusName | quote }}
 {{- end }}
