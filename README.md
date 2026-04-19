@@ -5,6 +5,15 @@ Kubernetes Helm charts for deploying the Islamic Open Finance (IOF) Platform.
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Helm](https://img.shields.io/badge/Helm-3.0+-blue.svg)](https://helm.sh/)
 
+## What you're deploying
+
+A banking-grade Shariah-native platform: **109 rails across 19 categories** (142+ endpoints) composed from **10 native domain engines** over a single double-entry ledger. Two of those engines are the platform's defensible moats — the economic reason a tier-1 balance sheet rents IOF instead of building in-house:
+
+- **Settlement Engine** (`services/settlement-service`) — 24×7×365 DvP/FOP/RVP/DFP finality for Murabaha, Ijarah, Salam, Sukuk. AAOIFI SS-1/8/10/17/21/30 enforced at the state machine; CSDR Art. 7 penalties priced pre-confirm; ribawi-pair netting. Reclaims 60–140 bps per corridor.
+- **Evidence Engine** (`services/evidence-service`) — signed, tamper-evident compliance pack on every trade. 47/54 controls across SOC 2, ISO 27001, AAOIFI, GDPR, PSD2, IFSB, ISO 20022. SHA-256 Merkle + HMAC, one-call verification. Reclaims 30–55 bps on audit + re-papering.
+
+Combined: **100–195 bps** reclaimed per corridor. Layers over Temenos, Finastra, Mambu or Open Banking Protocol — no core replacement.
+
 ## Charts
 
 | Chart | Description |
